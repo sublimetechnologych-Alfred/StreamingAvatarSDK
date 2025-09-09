@@ -1,12 +1,31 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="it">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Test HeyGen</title>
-  </head>
-  <body>
-    <h1>HeyGen SDK</h1>
-    <p>Se vedi questa pagina, il deploy funziona ✅</p>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Alfred Live Test</title>
+</head>
+<body>
+  <h1>Test Alfred con HeyGen SDK</h1>
+  <div id="avatar-container"></div>
+
+  <script type="module">
+    import { StreamingAvatar } from "https://unpkg.com/@heygen/streaming-avatar";
+
+    async function start() {
+      const container = document.getElementById("avatar-container");
+
+      const avatar = new StreamingAvatar({
+        apiKey: "<INSERISCI-LA-TUA-HEYGEN-API-KEY>", // 🔴 per ora lasciala così, poi la sostituiamo via Vercel
+        avatarId: "1837f93f22f94b88b9992853ca5e84f8", // ✅ questo è Alfred
+        voice: "en_us_male1", // poi cambiamo se serve un'altra voce
+        container,
+      });
+
+      await avatar.start();
+    }
+
+    start();
+  </script>
+</body>
 </html>
