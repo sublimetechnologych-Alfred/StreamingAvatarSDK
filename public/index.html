@@ -1,33 +1,75 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8">
-  <title>Alfred (voce rassicurante, ~67 anni)</title>
-  <script src="https://unpkg.com/@heygen/streaming-avatar"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Alfred con HeyGen SDK</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 30px;
+    }
+    h1 {
+      color: #222;
+    }
+    #video-container {
+      margin: 20px auto;
+      width: 640px;
+      height: 360px;
+      border: 2px solid #ccc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    video {
+      width: 100%;
+      height: 100%;
+    }
+    button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+  </style>
 </head>
 <body>
-  <h1>Alfred (voce rassicurante, ~67 anni)</h1>
-  <div id="avatar" style="width: 640px; height: 480px; border: 1px solid #ccc;"></div>
+  <h1>Alfred (voce Theo – Friendly)</h1>
+  <div id="video-container">
+    <video id="avatarVideo" autoplay playsinline></video>
+  </div>
   <button onclick="startAlfred()">Avvia Alfred</button>
 
   <script>
     async function startAlfred() {
-      // 1️⃣ Chiediamo il session token alla nostra API su Vercel
-      const resp = await fetch("/api/session");
-      const { data } = await resp.json();
-      const token = data.token;
+      try {
+        const response = await fetch("/api/session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            avatar_id: "1837f93f22f94b88b9992853ca5e84f8", // Alfred
+            voice_id: "5c1ade5e514c4c6c900b0ded224970fd", // Theo - Friendly
+            language: "it", // Italiano
+            quality: "high",
+            format: "mp4"
+          })
+        });
 
-      // 2️⃣ Avviamo HeyGen con session_token
-      const client = new HeyGen.AvatarClient({
-        el: document.getElementById("avatar"),
-        token: token
-      });
+        const data = await response.json();
+        console.log("Session response:", data);
 
-      await client.start({
-        avatarName: "1837f93f22f94b88b9992853ca5e84f8", // Alfred
-        voice: { voiceId: "en_us_001" },
-        startText: "Ciao, sono Alfred. La tua guida rassicurante di 67 anni."
-      });
+        if (data && data.data && data.data.rtmp_url) {
+          const video = document.getElementById("avatarVideo");
+          video.src = data.data.rtmp_url;
+        } else {
+          alert("Errore: Nessun flusso video ricevuto!");
+          console.error("Risposta sessione non valida:", data);
+        }
+      } catch (err) {
+        console.error("Errore avvio Alfred:", err);
+        alert("Errore avvio Alfred. Controlla console/logs.");
+      }
     }
   </script>
 </body>
