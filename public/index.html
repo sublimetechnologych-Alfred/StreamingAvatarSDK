@@ -2,27 +2,33 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>Test Alfred con HeyGen SDK</title>
-  <script src="https://unpkg.com/@heygen/streaming-avatar"></script>
+  <title>Alfred parla (voce rassicurante)</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; margin: 40px; }
+    #avatar { width: 640px; height: 360px; margin: 20px auto; border: 2px solid #ccc; }
+    button { font-size: 16px; padding: 10px 20px; }
+  </style>
 </head>
 <body>
-  <h1>Alfred in diretta con HeyGen SDK</h1>
-  <div id="avatar" style="width:640px; height:360px; border:1px solid #ccc;"></div>
+  <h1>Alfred (voce rassicurante, ~67 anni)</h1>
+  <div id="avatar"></div>
+  <button id="startBtn">Avvia Alfred</button>
 
+  <script src="https://unpkg.com/@heygen/streaming-avatar"></script>
   <script>
-    async function startAvatar() {
+    document.getElementById('startBtn').onclick = async () => {
       const sdk = new HeyGen.Avatar({
         el: document.getElementById('avatar'),
-        token: "<%= process.env.HEYGEN_API_KEY %>",
-        avatarId: "1837f93f22f94b88b9992853ca5e84f8", // ID di Alfred
-        voice: "en_male_john" // voce base (poi si può cambiare)
+        token: "", // non serve, bypassiamo il server per test rapido
+        apiKey: "", // su Vercel usiamo variabile, ma qui serve solo se testa direttamente
+        avatarId: "1837f93f22f94b88b9992853ca5e84f8", // Alfred
+        voice: "it_male_1", // voce ipotetica rassicurante
+        language: "it",
       });
 
       await sdk.start();
-      sdk.speak("Ciao! Sono Alfred e ora sono in diretta con HeyGen SDK.");
-    }
-
-    startAvatar();
+      sdk.speak("Buongiorno, sono Alfred. Non preoccuparti, sto bene. Come posso aiutarti oggi?");
+    };
   </script>
 </body>
 </html>
