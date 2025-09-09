@@ -2,75 +2,50 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Alfred con HeyGen SDK</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding: 30px;
-    }
-    h1 {
-      color: #222;
-    }
-    #video-container {
-      margin: 20px auto;
-      width: 640px;
-      height: 360px;
-      border: 2px solid #ccc;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    video {
-      width: 100%;
-      height: 100%;
-    }
-    button {
-      margin-top: 20px;
-      padding: 10px 20px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-  </style>
+  <script src="https://unpkg.com/@heygen/streaming-avatar/dist/index.umd.js"></script>
 </head>
 <body>
-  <h1>Alfred (voce Theo – Friendly)</h1>
-  <div id="video-container">
-    <video id="avatarVideo" autoplay playsinline></video>
-  </div>
-  <button onclick="startAlfred()">Avvia Alfred</button>
+  <h1>Alfred (voce rassicurante, ~67 anni)</h1>
+
+  <!-- qui verrà mostrato Alfred -->
+  <div id="avatar-container" style="width: 640px; height: 480px; border: 1px solid #000;"></div>
+  
+  <button id="startBtn">Avvia Alfred</button>
 
   <script>
-    async function startAlfred() {
+    document.getElementById("startBtn").addEventListener("click", async () => {
       try {
-        const response = await fetch("/api/session", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            avatar_id: "1837f93f22f94b88b9992853ca5e84f8", // Alfred
-            voice_id: "5c1ade5e514c4c6c900b0ded224970fd", // Theo - Friendly
-            language: "it", // Italiano
-            quality: "high",
-            format: "mp4"
-          })
+        // Chiamo il backend per creare la sessione
+        const response = await fetch("/api/session");
+        const data = await response.json();
+
+        if (!data || !data.client_secret) {
+          alert("Errore: sessione non creata!");
+          return;
+        }
+
+        // Inizializzo l’SDK con la chiave di sessione
+        const avatar = new HeyGenStreamingAvatar.Avatar({
+          container: document.getElementById("avatar-container"),
+          clientSecret: data.client_secret,
         });
 
-        const data = await response.json();
-        console.log("Session response:", data);
+        // Avvio Alfred
+        await avatar.connect();
 
-        if (data && data.data && data.data.rtmp_url) {
-          const video = document.getElementById("avatarVideo");
-          video.src = data.data.rtmp_url;
-        } else {
-          alert("Errore: Nessun flusso video ricevuto!");
-          console.error("Risposta sessione non valida:", data);
-        }
+        // Faccio parlare Alfred con un testo iniziale
+        await avatar.speak({
+          text: "Ciao! Sono Alfred, piacere di conoscerti.",
+          voice: "5c1ade5e514c4c6c900b0ded224970fd", // Theo - Friendly
+          avatarId: "1837f93f22f94b88b9992853ca5e84f8"  // il tuo avatar personalizzato Alfred
+        });
+
       } catch (err) {
-        console.error("Errore avvio Alfred:", err);
-        alert("Errore avvio Alfred. Controlla console/logs.");
+        console.error("Errore nell’avvio di Alfred:", err);
+        alert("Errore nell’avvio di Alfred!");
       }
-    }
+    });
   </script>
 </body>
 </html>
