@@ -12,17 +12,21 @@
 
   <script>
     async function startAlfred() {
+      // 1️⃣ Chiediamo il session token alla nostra API su Vercel
+      const resp = await fetch("/api/session");
+      const { data } = await resp.json();
+      const token = data.token;
+
+      // 2️⃣ Avviamo HeyGen con session_token
       const client = new HeyGen.AvatarClient({
         el: document.getElementById("avatar"),
-        token: "ODE4MWQ2NTE4NGYzNDA2M2I3ZTc5ZTEtMTc1NzQxNDg1OA==" // <-- la tua API Key HeyGen
+        token: token
       });
 
       await client.start({
         avatarName: "1837f93f22f94b88b9992853ca5e84f8", // Alfred
-        voice: {
-          voiceId: "en_us_001" // voce maschile chiara
-        },
-        startText: "Ciao, sono Alfred. La tua guida rassicurante di 67 anni. Sono pronto a parlare con te!"
+        voice: { voiceId: "en_us_001" },
+        startText: "Ciao, sono Alfred. La tua guida rassicurante di 67 anni."
       });
     }
   </script>
