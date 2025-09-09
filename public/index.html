@@ -2,50 +2,50 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Alfred con HeyGen SDK</title>
-  <script src="https://unpkg.com/@heygen/streaming-avatar/dist/index.umd.js"></script>
 </head>
 <body>
   <h1>Alfred (voce rassicurante, ~67 anni)</h1>
-
-  <!-- qui verrà mostrato Alfred -->
-  <div id="avatar-container" style="width: 640px; height: 480px; border: 1px solid #000;"></div>
   
-  <button id="startBtn">Avvia Alfred</button>
+  <button onclick="avviaAlfred()">Avvia Alfred</button>
+
+  <pre id="output"></pre>
 
   <script>
-    document.getElementById("startBtn").addEventListener("click", async () => {
+    async function avviaAlfred() {
+      const output = document.getElementById("output");
+      output.textContent = "Creo sessione in corso...";
+
       try {
-        // Chiamo il backend per creare la sessione
-        const response = await fetch("/api/session");
-        const data = await response.json();
+        // 1. Recupero la chiave dal tuo endpoint sicuro
+        const res = await fetch("/api/key");
+        const data = await res.json();
+        const apiKey = data.key;
 
-        if (!data || !data.client_secret) {
-          alert("Errore: sessione non creata!");
-          return;
-        }
-
-        // Inizializzo l’SDK con la chiave di sessione
-        const avatar = new HeyGenStreamingAvatar.Avatar({
-          container: document.getElementById("avatar-container"),
-          clientSecret: data.client_secret,
+        // 2. Chiamo l’API HeyGen per creare una sessione streaming
+        const sessionRes = await fetch("https://api.heygen.com/v1/streaming.new", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            voice: "5c1ade5e514c4c6c900b0ded224970fd", // Theo - Friendly
+            avatar: "default", 
+            quality: "high"
+          })
         });
 
-        // Avvio Alfred
-        await avatar.connect();
-
-        // Faccio parlare Alfred con un testo iniziale
-        await avatar.speak({
-          text: "Ciao! Sono Alfred, piacere di conoscerti.",
-          voice: "5c1ade5e514c4c6c900b0ded224970fd", // Theo - Friendly
-          avatarId: "1837f93f22f94b88b9992853ca5e84f8"  // il tuo avatar personalizzato Alfred
-        });
+        const sessionData = await sessionRes.json();
+        console.log("Risposta HeyGen:", sessionData);
+        output.textContent = JSON.stringify(sessionData, null, 2);
 
       } catch (err) {
-        console.error("Errore nell’avvio di Alfred:", err);
-        alert("Errore nell’avvio di Alfred!");
+        console.error("Errore:", err);
+        output.textContent = "Errore: " + err.message;
       }
-    });
+    }
   </script>
 </body>
 </html>
