@@ -2,48 +2,40 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Alfred con HeyGen SDK</title>
+  <title>Alfred (voce rassicurante)</title>
 </head>
 <body>
   <h1>Alfred (voce rassicurante, ~67 anni)</h1>
-  
-  <button onclick="avviaAlfred()">Avvia Alfred</button>
+  <div id="avatar" style="width: 480px; height: 360px; background: #000;"></div>
+  <button onclick="startAlfred()">Avvia Alfred</button>
 
-  <pre id="output"></pre>
-
-  <script>
-    async function avviaAlfred() {
-      const output = document.getElementById("output");
-      output.textContent = "Creo sessione in corso...";
-
+  <script type="module">
+    async function startAlfred() {
       try {
-        // 1. Recupero la chiave dal tuo endpoint sicuro
-        const res = await fetch("/api/key");
-        const data = await res.json();
-        const apiKey = data.key;
-
-        // 2. Chiamo l’API HeyGen per creare una sessione streaming
-        const sessionRes = await fetch("https://api.heygen.com/v1/streaming.new", {
+        // 1. Crea sessione dal tuo backend su Vercel
+        const resp = await fetch("/api/session", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${apiKey}`
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             voice: "5c1ade5e514c4c6c900b0ded224970fd", // Theo - Friendly
-            avatar: "default", 
-            quality: "high"
+            avatar: "default" // oppure un avatar ID valido
           })
         });
 
-        const sessionData = await sessionRes.json();
-        console.log("Risposta HeyGen:", sessionData);
-        output.textContent = JSON.stringify(sessionData, null, 2);
+        const data = await resp.json();
+        if (!resp.ok || !data || !data.data?.sdp) {
+          throw new Error("Impossibile creare la sessione: " + JSON.stringify(data));
+        }
+
+        console.log("Sessione creata:", data);
+
+        // 2. Mostra messaggio di test (puoi aggiungere streaming video più avanti)
+        document.getElementById("avatar").innerHTML =
+          "<p style='color:white; padding:20px'>Sessione avviata con Alfred ✅</p>";
 
       } catch (err) {
-        console.error("Errore:", err);
-        output.textContent = "Errore: " + err.message;
+        alert("Errore: " + err.message);
+        console.error(err);
       }
     }
   </script>
