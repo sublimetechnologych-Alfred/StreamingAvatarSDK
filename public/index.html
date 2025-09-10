@@ -1,62 +1,61 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8" />
-  <title>Alfred con LiveKit</title>
-  <style>
-    body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
-    video { width: 640px; height: 360px; background: black; margin-top: 20px; }
-  </style>
+  <meta charset="UTF-8">
+  <title>Alfred (voce rassicurante, ~67 anni)</title>
 </head>
 <body>
-  <h1>Alfred (avatar interattivo)</h1>
-  <button id="startBtn">Avvia Alfred</button>
+  <h1>Alfred (voce rassicurante, ~67 anni)</h1>
+  <video id="avatar" autoplay playsinline></video>
   <br>
-  <video id="avatarVideo" autoplay playsinline></video>
+  <button id="startBtn">Avvia Alfred</button>
 
-  <!-- LiveKit client -->
-  <script type="module">
-    import { Room } from "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
+  <script>
+    const startBtn = document.getElementById("startBtn");
+    const videoEl = document.getElementById("avatar");
 
-    document.getElementById("startBtn").addEventListener("click", async () => {
+    startBtn.onclick = async () => {
       try {
-        // 1. Crea nuova sessione dal backend
-        const res = await fetch("/api/session", { method: "POST" });
-        const result = await res.json();
+        // 1. Crea RTCPeerConnection
+        const pc = new RTCPeerConnection();
+        pc.ontrack = (event) => {
+          videoEl.srcObject = event.streams[0];
+        };
 
-        if (!res.ok || result.error) {
-          alert("Errore creazione sessione: " + JSON.stringify(result));
-          return;
-        }
+        // 2. Aggiungi traccia audio (opzionale microfono)
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
-        // 2. Estraggo i dati principali
-        const data = result.data;
-        console.log("Session data:", data);
+        // 3. Crea un’offerta
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
 
-        const url = data.url;           // URL del server LiveKit
-        const token = data.token;       // Token accesso
-        const sessionId = data.session_id;
-
-        console.log("Connetto a LiveKit:", url, sessionId);
-
-        // 3. Connetto a LiveKit
-        const room = new Room();
-        await room.connect(url, token);
-
-        // 4. Quando arriva un video → attaccalo al <video>
-        room.on("trackSubscribed", (track, publication, participant) => {
-          if (track.kind === "video") {
-            const videoEl = document.getElementById("avatarVideo");
-            track.attach(videoEl);
-          }
+        // 4. Manda l’offerta al backend /api/session
+        const resp = await fetch("/api/session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sdp: offer.sdp, type: offer.type })
         });
 
-        alert("Alfred è partito!");
+        const data = await resp.json();
+        console.log("Risposta API:", data);
+
+        if (!data.sdp) {
+          throw new Error("Nessun SDP nella risposta!");
+        }
+
+        // 5. Imposta la remote description
+        await pc.setRemoteDescription({
+          type: "answer",
+          sdp: data.sdp.sdp || data.sdp // dipende dal formato
+        });
+
+        alert("Alfred avviato con successo!");
       } catch (err) {
-        console.error("Errore:", err);
+        console.error("Errore avvio Alfred:", err);
         alert("Errore avvio Alfred: " + err.message);
       }
-    });
+    };
   </script>
 </body>
 </html>
