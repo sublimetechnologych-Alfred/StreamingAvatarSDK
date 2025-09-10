@@ -1,35 +1,61 @@
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
+  const API_KEY = process.env.HEYGEN_API_KEY;
+
+  if (!API_KEY) {
+    return res.status(500).json({ error: "HEYGEN_API_KEY mancante" });
   }
 
-  try {
-    const { sdp, type } = req.body;
+  // Se è una POST senza body → crea nuova sessione
+  if (req.method === "POST" && !req.body?.sdp) {
+    try {
+      const response = await fetch("https://api.heygen.com/v1/streaming.new", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${API_KEY}`,
+        },
+        body: JSON.stringify({
+          "voice": { "voice_id": "5c1ade5e514c4c6c900b0ded224970fd" }, // Theo - Friendly
+          "avatar_name": "default", // puoi cambiarlo se vuoi un avatar specifico
+          "quality": "high",
+        }),
+      });
 
-    const resp = await fetch("https://api.heygen.com/v1/streaming.new", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${process.env.HEYGEN_API_KEY}`
-      },
-      body: JSON.stringify({
-        sdp,
-        type,
-        voice: "5c1ade5e514c4c6c900b0ded224970fd", // Theo - Friendly
-        avatar_name: "default" // opzionale, puoi cambiarlo
-      })
-    });
+      const data = await response.json();
+      if (!data.data) {
+        return res.status(500).json({ error: "Impossibile creare la sessione", details: data });
+      }
 
-    const data = await resp.json();
-
-    if (!resp.ok) {
-      console.error("Errore HeyGen:", data);
-      return res.status(500).json({ error: "Errore creazione sessione HeyGen", details: data });
+      return res.status(200).json({
+        session_id: data.data.session_id,
+        sdp: data.data.sdp,
+      });
+    } catch (err) {
+      return res.status(500).json({ error: "Errore backend", details: err.message });
     }
-
-    return res.status(200).json(data);
-  } catch (err) {
-    console.error("Errore API /api/session:", err);
-    return res.status(500).json({ error: "Errore interno server" });
   }
+
+  // Se è una POST con SDP → invia l’answer al server HeyGen
+  if (req.method === "POST" && req.body?.sdp) {
+    try {
+      const response = await fetch("https://api.heygen.com/v1/streaming.sdp", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${API_KEY}`,
+        },
+        body: JSON.stringify({
+          session_id: req.body.session_id,
+          sdp: req.body.sdp,
+        }),
+      });
+
+      const data = await response.json();
+      return res.status(200).json(data);
+    } catch (err) {
+      return res.status(500).json({ error: "Errore SDP", details: err.message });
+    }
+  }
+
+  return res.status(405).json({ error: "Metodo non supportato" });
 }
