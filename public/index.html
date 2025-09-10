@@ -1,52 +1,57 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Alfred (voce rassicurante, ~67 anni)</title>
   <style>
-    body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
-    video { width: 600px; height: 400px; background: black; margin-top: 20px; }
-    button { padding: 10px 20px; font-size: 16px; margin-top: 20px; }
+    body { font-family: Arial, sans-serif; text-align: center; }
+    h1 { margin-bottom: 20px; }
+    #avatar { width: 640px; height: 480px; background: black; margin: auto; }
+    button { margin-top: 20px; padding: 10px 20px; font-size: 16px; }
   </style>
 </head>
 <body>
   <h1>Alfred (voce rassicurante, ~67 anni)</h1>
-  <video id="remoteVideo" autoplay playsinline></video><br />
+  <video id="avatar" autoplay playsinline></video>
+  <br>
   <button onclick="startAlfred()">Avvia Alfred</button>
 
   <script>
     async function startAlfred() {
-      const pc = new RTCPeerConnection();
+      try {
+        // Chiediamo al backend di creare una sessione
+        const response = await fetch("/api/session", { method: "POST" });
+        const data = await response.json();
 
-      // Mostra il video remoto
-      const remoteVideo = document.getElementById("remoteVideo");
-      pc.ontrack = (event) => {
-        remoteVideo.srcObject = event.streams[0];
-      };
+        if (!data.sdp) {
+          alert("Errore: sessione non creata!");
+          console.error(data);
+          return;
+        }
 
-      // Cattura microfono locale e invialo
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach(track => pc.addTrack(track, stream));
+        const pc = new RTCPeerConnection();
 
-      // Crea SDP offer
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
+        // Mostra il flusso video remoto
+        const videoElement = document.getElementById("avatar");
+        pc.ontrack = (event) => {
+          videoElement.srcObject = event.streams[0];
+        };
 
-      // Invia l’offerta al backend
-      const response = await fetch("/api/session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sdp: offer.sdp, type: offer.type })
-      });
+        // Creiamo una risposta locale e inviamola al server
+        await pc.setRemoteDescription({ type: "offer", sdp: data.sdp });
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
 
-      const answer = await response.json();
-      if (!answer || !answer.sdp) {
-        alert("Errore: sessione non creata!");
-        return;
+        await fetch("/api/session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sdp: answer.sdp, session_id: data.session_id })
+        });
+
+      } catch (err) {
+        alert("Errore: " + err.message);
+        console.error(err);
       }
-
-      // Imposta la risposta remota
-      await pc.setRemoteDescription(answer);
     }
   </script>
 </body>
