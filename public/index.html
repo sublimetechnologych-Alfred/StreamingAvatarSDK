@@ -1,57 +1,55 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Alfred (voce rassicurante, ~67 anni)</title>
-  <style>
-    body { font-family: Arial, sans-serif; text-align: center; }
-    h1 { margin-bottom: 20px; }
-    #avatar { width: 640px; height: 480px; background: black; margin: auto; }
-    button { margin-top: 20px; padding: 10px 20px; font-size: 16px; }
-  </style>
 </head>
 <body>
   <h1>Alfred (voce rassicurante, ~67 anni)</h1>
-  <video id="avatar" autoplay playsinline></video>
-  <br>
+  <div id="video-container"></div>
   <button onclick="startAlfred()">Avvia Alfred</button>
 
   <script>
     async function startAlfred() {
-      try {
-        // Chiediamo al backend di creare una sessione
-        const response = await fetch("/api/session", { method: "POST" });
-        const data = await response.json();
+      const pc = new RTCPeerConnection();
 
-        if (!data.sdp) {
-          alert("Errore: sessione non creata!");
-          console.error(data);
-          return;
-        }
+      // Aggiunge il video nel DOM
+      const videoEl = document.createElement("video");
+      videoEl.autoplay = true;
+      videoEl.playsInline = true;
+      document.getElementById("video-container").appendChild(videoEl);
 
-        const pc = new RTCPeerConnection();
+      pc.ontrack = (event) => {
+        videoEl.srcObject = event.streams[0];
+      };
 
-        // Mostra il flusso video remoto
-        const videoElement = document.getElementById("avatar");
-        pc.ontrack = (event) => {
-          videoElement.srcObject = event.streams[0];
-        };
+      // Crea offerta locale
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
 
-        // Creiamo una risposta locale e inviamola al server
-        await pc.setRemoteDescription({ type: "offer", sdp: data.sdp });
-        const answer = await pc.createAnswer();
-        await pc.setLocalDescription(answer);
+      // Chiamata API per creare la sessione
+      const res = await fetch("/api/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sdp: offer.sdp,
+          type: offer.type
+        }),
+      });
 
-        await fetch("/api/session", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sdp: answer.sdp, session_id: data.session_id })
-        });
+      const data = await res.json();
+      console.log("🔍 Risposta API /api/session:", data);
 
-      } catch (err) {
-        alert("Errore: " + err.message);
-        console.error(err);
+      if (!data || !data.sdp) {
+        alert("Errore: /api/session non restituisce un SDP valido");
+        return;
       }
+
+      // Imposta la remoteDescription dal server
+      await pc.setRemoteDescription({
+        type: "answer",
+        sdp: data.sdp,
+      });
     }
   </script>
 </body>
