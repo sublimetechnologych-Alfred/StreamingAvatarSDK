@@ -4,7 +4,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const response = await fetch("https://api.heygen.com/v1/streaming.create", {
+    const response = await fetch("https://api.heygen.com/v1/streaming.create_session", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${process.env.HEYGEN_API_KEY}`,
@@ -35,3 +35,4 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Errore nella creazione sessione", detail: err.message });
   }
 }
+
