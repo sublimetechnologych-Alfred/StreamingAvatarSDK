@@ -1,14 +1,17 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8">
-  <title>Alfred (voce rassicurante, ~67 anni)</title>
+  <meta charset="UTF-8" />
+  <title>Alfred con HeyGen SDK</title>
 </head>
 <body>
-  <h1>Alfred (voce rassicurante, ~67 anni)</h1>
-  <video id="avatar" autoplay playsinline></video>
+  <h1>Parla con Alfred</h1>
+  <video id="avatar" autoplay playsinline style="width: 600px; border: 1px solid #ccc;"></video>
   <br>
   <button id="startBtn">Avvia Alfred</button>
+
+  <!-- Import SDK ufficiale HeyGen -->
+  <script src="https://unpkg.com/@heygen/streaming-avatar"></script>
 
   <script>
     const startBtn = document.getElementById("startBtn");
@@ -16,44 +19,34 @@
 
     startBtn.onclick = async () => {
       try {
-        // 1. Crea RTCPeerConnection
-        const pc = new RTCPeerConnection();
-        pc.ontrack = (event) => {
-          videoEl.srcObject = event.streams[0];
-        };
-
-        // 2. Aggiungi traccia audio (opzionale microfono)
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        stream.getTracks().forEach(track => pc.addTrack(track, stream));
-
-        // 3. Crea un’offerta
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-
-        // 4. Manda l’offerta al backend /api/session
-        const resp = await fetch("/api/session", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sdp: offer.sdp, type: offer.type })
+        // 1. Inizializza il client HeyGen
+        const client = new HeygenStreaming.AvatarClient({
+          token: "ODE4MWQ2NTE4NGYzNDA2M2I3ZTc5ZTBjNGI3M2Y1MjYtMTc1NzQxNDg1OA=="
         });
 
-        const data = await resp.json();
-        console.log("Risposta API:", data);
-
-        if (!data.sdp) {
-          throw new Error("Nessun SDP nella risposta!");
-        }
-
-        // 5. Imposta la remote description
-        await pc.setRemoteDescription({
-          type: "answer",
-          sdp: data.sdp.sdp || data.sdp // dipende dal formato
+        // 2. Connetti Alfred
+        const session = await client.createSession({
+          avatar_id: "1837f93f22f94b88b9992853ca5e84f8", // tuo avatar Alfred
+          voice_id: "5c1ade5e514c4c6c900b0ded224970fd" // Theo - Friendly
         });
 
-        alert("Alfred avviato con successo!");
+        console.log("Sessione avviata:", session);
+
+        // 3. Attacca il flusso al video
+        session.on("track", (event) => {
+          if (event.streams && event.streams[0]) {
+            videoEl.srcObject = event.streams[0];
+          }
+        });
+
+        // 4. Testo da dire
+        await session.speak({
+          text: "Ciao, sono Alfred. Ora funziono con l’SDK ufficiale HeyGen!"
+        });
+
       } catch (err) {
         console.error("Errore avvio Alfred:", err);
-        alert("Errore avvio Alfred: " + err.message);
+        alert("Errore: " + err.message);
       }
     };
   </script>
