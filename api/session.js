@@ -4,7 +4,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const response = await fetch("https://api.heygen.com/v1/streaming.create_session", {
+    const response = await fetch("https://api.heygen.com/v1/streaming.avatar.create_session", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${process.env.HEYGEN_API_KEY}`,
@@ -19,25 +19,22 @@ export default async function handler(req, res) {
       }),
     });
 
-    // prova a leggere come testo per debug
-    const raw = await response.text();
-
+    const raw = await response.text(); // logghiamo il contenuto grezzo
     console.log("📡 Risposta grezza HeyGen:", raw);
 
-    // se non è JSON, fallisce
     let result;
     try {
       result = JSON.parse(raw);
     } catch (err) {
       return res.status(500).json({
-        error: "Errore parsing JSON da HeyGen",
+        error: "Risposta HeyGen non è JSON valido",
         raw
       });
     }
 
-    if (!result || !result.data || !result.data.sdp) {
+    if (!result?.data?.sdp) {
       return res.status(500).json({
-        error: "Errore nella creazione sessione",
+        error: "Nessun SDP restituito da HeyGen",
         raw: result
       });
     }
@@ -48,5 +45,3 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Errore nella creazione sessione", detail: err.message });
   }
 }
-
-
