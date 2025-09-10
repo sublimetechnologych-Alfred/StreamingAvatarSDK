@@ -1,33 +1,35 @@
-// api/session.js
-import { NextResponse } from "next/server";
+export default async function handler(req, res) {
+  console.log("HEYGEN_API_KEY:", process.env.HEYGEN_API_KEY ? "OK" : "MISSING");
 
-export async function POST(req) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Metodo non permesso" });
+  }
+
   try {
-    const { name } = await req.json();
-
-    // Chiave segreta HeyGen (mettila in Vercel → Settings → Environment Variables)
-    const apiKey = process.env.HEYGEN_API_KEY;
-
     const response = await fetch("https://api.heygen.com/v1/streaming.new", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${apiKey}`,
+        "Authorization": `Bearer ${process.env.HEYGEN_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        voice: {
-          voice_id: "5c1ade5e514c4c6c900b0ded224970fd", // Theo - Friendly
-        },
+        voice: { voice_id: "5c1ade5e514c4c6c900b0ded224970fd" },
       }),
     });
 
+    const data = await response.json();
+    console.log("HeyGen response:", data);
+
     if (!response.ok) {
-      throw new Error(await response.text());
+      return res.status(response.status).json({ error: data });
     }
 
-    const data = await response.json();
-    return NextResponse.json(data);
+    return res.status(200).json(data);
   } catch (err) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error("Errore session.js:", err);
+    return res.status(500).json({
+      error: "Errore nella creazione sessione",
+      detail: err.message,
+    });
   }
 }
