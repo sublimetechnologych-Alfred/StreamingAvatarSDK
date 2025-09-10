@@ -19,8 +19,21 @@ export default async function handler(req, res) {
       }),
     });
 
-    const result = await response.json();
-    console.log("📡 Risposta completa da HeyGen:", result);
+    // prova a leggere come testo per debug
+    const raw = await response.text();
+
+    console.log("📡 Risposta grezza HeyGen:", raw);
+
+    // se non è JSON, fallisce
+    let result;
+    try {
+      result = JSON.parse(raw);
+    } catch (err) {
+      return res.status(500).json({
+        error: "Errore parsing JSON da HeyGen",
+        raw
+      });
+    }
 
     if (!result || !result.data || !result.data.sdp) {
       return res.status(500).json({
@@ -35,4 +48,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Errore nella creazione sessione", detail: err.message });
   }
 }
+
 
