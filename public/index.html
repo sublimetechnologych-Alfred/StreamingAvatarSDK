@@ -1,51 +1,30 @@
 <!DOCTYPE html>
 <html lang="it">
-<head>
-  <meta charset="UTF-8">
-  <title>Alfred LiveKit</title>
-  <style>
-    video {
-      width: 480px;
-      height: 360px;
-      background: black;
-    }
-  </style>
-</head>
-<body>
-  <h1>Alfred (voce rassicurante, ~67 anni)</h1>
-  <video id="avatar" autoplay playsinline></video>
-  <br>
-  <button id="start">Avvia Alfred</button>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Alfred (voce rassicurante, ~67 anni)</title>
+  </head>
+  <body>
+    <h1>Alfred (voce rassicurante, ~67 anni)</h1>
+    <button id="startBtn">Crea sessione</button>
 
-  <script type="module">
-    import { Room } from "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
+    <script>
+      document.getElementById("startBtn").addEventListener("click", async () => {
+        try {
+          const res = await fetch("/api/session", { method: "POST" });
+          const data = await res.json();
+          console.log("Risposta API /api/session:", data);
 
-    document.getElementById("start").onclick = async () => {
-      try {
-        // Chiamata al backend
-        const res = await fetch("/api/session", { method: "POST" });
-        const { data, error } = await res.json();
-
-        if (error) throw new Error(error);
-
-        const url = data.url;
-        const token = data.token;
-
-        // Connetti LiveKit
-        const room = new Room();
-        await room.connect(url, token);
-
-        room.on("trackSubscribed", (track, publication, participant) => {
-          if (track.kind === "video") {
-            const videoEl = document.getElementById("avatar");
-            track.attach(videoEl);
+          if (data.error) {
+            alert("Errore: " + JSON.stringify(data));
+          } else {
+            alert("Sessione creata! Session ID: " + data.data?.session_id);
           }
-        });
-      } catch (err) {
-        alert("Errore: " + err.message);
-        console.error(err);
-      }
-    };
-  </script>
-</body>
+        } catch (err) {
+          console.error(err);
+          alert("Errore nella creazione sessione");
+        }
+      });
+    </script>
+  </body>
 </html>
