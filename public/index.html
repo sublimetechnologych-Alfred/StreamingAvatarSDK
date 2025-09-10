@@ -2,41 +2,51 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8" />
-  <title>Alfred (voce rassicurante)</title>
+  <title>Alfred (voce rassicurante, ~67 anni)</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
+    video { width: 600px; height: 400px; background: black; margin-top: 20px; }
+    button { padding: 10px 20px; font-size: 16px; margin-top: 20px; }
+  </style>
 </head>
 <body>
   <h1>Alfred (voce rassicurante, ~67 anni)</h1>
-  <div id="avatar" style="width: 480px; height: 360px; background: #000;"></div>
+  <video id="remoteVideo" autoplay playsinline></video><br />
   <button onclick="startAlfred()">Avvia Alfred</button>
 
-  <script type="module">
+  <script>
     async function startAlfred() {
-      try {
-        // 1. Crea sessione dal tuo backend su Vercel
-        const resp = await fetch("/api/session", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            voice: "5c1ade5e514c4c6c900b0ded224970fd", // Theo - Friendly
-            avatar: "default" // oppure un avatar ID valido
-          })
-        });
+      const pc = new RTCPeerConnection();
 
-        const data = await resp.json();
-        if (!resp.ok || !data || !data.data?.sdp) {
-          throw new Error("Impossibile creare la sessione: " + JSON.stringify(data));
-        }
+      // Mostra il video remoto
+      const remoteVideo = document.getElementById("remoteVideo");
+      pc.ontrack = (event) => {
+        remoteVideo.srcObject = event.streams[0];
+      };
 
-        console.log("Sessione creata:", data);
+      // Cattura microfono locale e invialo
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
-        // 2. Mostra messaggio di test (puoi aggiungere streaming video più avanti)
-        document.getElementById("avatar").innerHTML =
-          "<p style='color:white; padding:20px'>Sessione avviata con Alfred ✅</p>";
+      // Crea SDP offer
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
 
-      } catch (err) {
-        alert("Errore: " + err.message);
-        console.error(err);
+      // Invia l’offerta al backend
+      const response = await fetch("/api/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sdp: offer.sdp, type: offer.type })
+      });
+
+      const answer = await response.json();
+      if (!answer || !answer.sdp) {
+        alert("Errore: sessione non creata!");
+        return;
       }
+
+      // Imposta la risposta remota
+      await pc.setRemoteDescription(answer);
     }
   </script>
 </body>
