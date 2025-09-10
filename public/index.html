@@ -1,56 +1,51 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8" />
-  <title>Alfred (voce rassicurante, ~67 anni)</title>
+  <meta charset="UTF-8">
+  <title>Alfred LiveKit</title>
+  <style>
+    video {
+      width: 480px;
+      height: 360px;
+      background: black;
+    }
+  </style>
 </head>
 <body>
   <h1>Alfred (voce rassicurante, ~67 anni)</h1>
-  <div id="video-container"></div>
-  <button onclick="startAlfred()">Avvia Alfred</button>
+  <video id="avatar" autoplay playsinline></video>
+  <br>
+  <button id="start">Avvia Alfred</button>
 
-  <script>
-    async function startAlfred() {
-      const pc = new RTCPeerConnection();
+  <script type="module">
+    import { Room } from "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 
-      // Aggiunge il video nel DOM
-      const videoEl = document.createElement("video");
-      videoEl.autoplay = true;
-      videoEl.playsInline = true;
-      document.getElementById("video-container").appendChild(videoEl);
+    document.getElementById("start").onclick = async () => {
+      try {
+        // Chiamata al backend
+        const res = await fetch("/api/session", { method: "POST" });
+        const { data, error } = await res.json();
 
-      pc.ontrack = (event) => {
-        videoEl.srcObject = event.streams[0];
-      };
+        if (error) throw new Error(error);
 
-      // Crea offerta locale
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
+        const url = data.url;
+        const token = data.token;
 
-      // Chiamata API per creare la sessione
-      const res = await fetch("/api/session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sdp: offer.sdp,
-          type: offer.type
-        }),
-      });
+        // Connetti LiveKit
+        const room = new Room();
+        await room.connect(url, token);
 
-      const data = await res.json();
-      console.log("🔍 Risposta API /api/session:", data);
-
-      if (!data || !data.sdp) {
-        alert("Errore: /api/session non restituisce un SDP valido");
-        return;
+        room.on("trackSubscribed", (track, publication, participant) => {
+          if (track.kind === "video") {
+            const videoEl = document.getElementById("avatar");
+            track.attach(videoEl);
+          }
+        });
+      } catch (err) {
+        alert("Errore: " + err.message);
+        console.error(err);
       }
-
-      // Imposta la remoteDescription dal server
-      await pc.setRemoteDescription({
-        type: "answer",
-        sdp: data.sdp,
-      });
-    }
+    };
   </script>
 </body>
 </html>
