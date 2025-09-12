@@ -1,43 +1,39 @@
 export default async function handler(req, res) {
   if (req.method !== "POST") {
-    return res.status(405).json({ error: "Metodo non consentito" });
+    return res.status(405).json({ error: "Solo POST consentito" });
   }
 
   try {
-    const { sdp, type } = req.body;
-
-    // chiave API di HeyGen
-    const apiKey = process.env.HEYGEN_API_KEY;
-
-    // chiamata a HeyGen
-    const response = await fetch("https://api.heygen.com/v1/streaming.avatar.session.create", {
+    const heygenRes = await fetch("https://api.heygen.com/v1/streaming.create_session", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${apiKey}`,
+        "Authorization": `Bearer ${process.env.HEYGEN_API_KEY}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        session_config: {
-          avatar_name: "default",
-          voice_id: "5c1ade5e514c4c6c900b0ded224970fd", // Theo - Friendly
-          language: "Multilingual"
+        voice: {
+          voice_id: "5c1ade5e514c4c6c900b0ded224970fd" // Theo - Friendly
         },
-        sdp: { type, sdp }
+        avatar: {
+          type: "default"
+        }
       })
     });
 
-    const data = await response.json();
+    const data = await heygenRes.json();
 
-    if (!response.ok) {
+    if (!heygenRes.ok) {
       console.error("Errore HeyGen:", data);
-      return res.status(500).json({ error: "Errore da HeyGen", detail: data });
+      return res.status(heygenRes.status).json({ error: data });
     }
 
-    // risposta verso il browser
-    return res.status(200).json({
-      session_id: data.data.session_id,
-      sdp: data.data.sdp
-    });
+    res.status(200).json(data.data);
+  } catch (err) {
+    console.error("Errore in /api/session:", err);
+    res.status(500).json({ error: "Errore interno", detail: err.message });
+  }
+}
+
 
   } catch (error) {
     console.error("Errore in /api/session:", error);
