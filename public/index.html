@@ -1,52 +1,48 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8" />
-  <title>Alfred con HeyGen SDK</title>
+  <meta charset="UTF-8">
+  <title>Parla con Alfred</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
+    #avatar { width: 600px; height: 400px; border: 1px solid #ccc; margin: 20px auto; }
+    button { padding: 10px 20px; font-size: 16px; }
+  </style>
 </head>
 <body>
   <h1>Parla con Alfred</h1>
-  <video id="avatar" autoplay playsinline style="width: 600px; border: 1px solid #ccc;"></video>
-  <br>
+  <div id="avatar"></div>
   <button id="startBtn">Avvia Alfred</button>
 
-  <!-- Import SDK ufficiale HeyGen -->
+  <!-- ✅ Import SDK HeyGen -->
   <script src="https://unpkg.com/@heygen/streaming-avatar"></script>
 
   <script>
     const startBtn = document.getElementById("startBtn");
-    const videoEl = document.getElementById("avatar");
 
     startBtn.onclick = async () => {
       try {
-        // 1. Inizializza il client HeyGen
+        console.log("Avvio Alfred...");
+
+        const response = await fetch("/api/session", { method: "POST" });
+        const data = await response.json();
+        console.log("Sessione:", data);
+
+        if (!data || !data.data) throw new Error("Sessione non creata!");
+
+        const container = document.getElementById("avatar");
+
+        // ✅ Usa l'SDK importato dallo script
         const client = new HeygenStreaming.AvatarClient({
-          token: "ODE4MWQ2NTE4NGYzNDA2M2I3ZTc5ZTBjNGI3M2Y1MjYtMTc1NzQxNDg1OA=="
+          el: container,
+          sessionId: data.data.session_id,
         });
 
-        // 2. Connetti Alfred
-        const session = await client.createSession({
-          avatar_id: "1837f93f22f94b88b9992853ca5e84f8", // tuo avatar Alfred
-          voice_id: "5c1ade5e514c4c6c900b0ded224970fd" // Theo - Friendly
-        });
-
-        console.log("Sessione avviata:", session);
-
-        // 3. Attacca il flusso al video
-        session.on("track", (event) => {
-          if (event.streams && event.streams[0]) {
-            videoEl.srcObject = event.streams[0];
-          }
-        });
-
-        // 4. Testo da dire
-        await session.speak({
-          text: "Ciao, sono Alfred. Ora funziono con l’SDK ufficiale HeyGen!"
-        });
-
+        await client.start();
+        await client.speak({ text: "Ciao, sono Alfred. Ora funziono con l’SDK ufficiale HeyGen!" });
       } catch (err) {
         console.error("Errore avvio Alfred:", err);
-        alert("Errore: " + err.message);
+        alert("Errore avvio Alfred: " + err.message);
       }
     };
   </script>
